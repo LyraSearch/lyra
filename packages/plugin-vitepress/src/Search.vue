@@ -1,58 +1,35 @@
 <script lang='ts' setup>
 import { onMounted } from 'vue'
 import { useData } from 'vitepress'
-import { RegisterSearchBox, presets, signals as $ } from '@orama/searchbox'
 
 const VPData = useData()
 
-$.colorScheme.value = VPData.isDark.value ? 'dark' : 'light'
+// $.colorScheme.value = VPData.isDark.value ? 'dark' : 'light'
 
 onMounted(async () => {
+  (async () => {
+    await import('https://cdn.jsdelivr.net/npm/@orama/wc-components@latest/dist/orama-ui/orama-ui.esm.js')
+    await import('https://cdn.jsdelivr.net/npm/@orama/wc-components@latest/dist/orama-ui/orama-ui.css')
+  })()
+
   // @ts-expect-error - virtual:search-data is not globally defined
   const oramaPluginData = await import('virtual:search-data')
   const oramaInstance = oramaPluginData.default.data
   const oramaAnalytics = oramaPluginData.default.analytics
-
-  RegisterSearchBox({
-    oramaInstance: oramaInstance,
-    preset: presets.docs.name,
-    show: false,
-    analytics: oramaAnalytics
-  })
 })
 </script>
 
 <template>
   <ClientOnly>
-    <orama-searchbox />
+    <!-- should implement the searchbox here -->
+    <orama-chat-box
+      :client-instance="oramaInstance"
+    />
 
     <div class="VPNavBarSearch search">
       <div id="docsearch">
-        <button type="button" class="DocSearch DocSearch-Button" aria-label="Search" v-on:click="$.show.value = true">
-          <span class="DocSearch-Button-Container">
-            <svg
-              class="DocSearch-Search-Icon"
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              aria-label="search icon"
-            >
-              <path
-                d="M14.386 14.386l4.0877 4.0877-4.0877-4.0877c-2.9418 2.9419-7.7115 2.9419-10.6533 0-2.9419-2.9418-2.9419-7.7115 0-10.6533 2.9418-2.9419 7.7115-2.9419 10.6533 0 2.9419 2.9418 2.9419 7.7115 0 10.6533z"
-                stroke="currentColor"
-                fill="none"
-                fill-rule="evenodd"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            <span class="DocSearch-Button-Placeholder">Search</span>
-          </span>
-          <span class="DocSearch-Button-Keys">
-            <kbd class="DocSearch-Button-Key"></kbd>
-            <kbd class="DocSearch-Button-Key">K</kbd>
-          </span>
-      </button>
+        <!-- should implement search button here -->
+        <orama-search-button />
       </div>
     </div>
   </ClientOnly>

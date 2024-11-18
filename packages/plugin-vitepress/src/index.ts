@@ -3,12 +3,18 @@ import type { SiteConfig } from 'vitepress'
 import MarkdownIt from 'markdown-it'
 import { JSDOM } from 'jsdom'
 import { presets } from '@orama/searchbox'
-import { AnySchema, create, insertMultiple } from '@orama/orama'
+import { AnySchema, create, insertMultiple, OramaPlugin } from '@orama/orama'
 import { persist } from '@orama/plugin-data-persistence'
+import { pluginPT15 } from '@orama/plugin-pt15'
+import { pluginQPS } from '@orama/plugin-qps'
+import { ComponentLibrary } from '@orama/vue-components'
 import slugify from 'slugify'
 import { readFileSync } from 'fs'
 
+type ScoringAlgorithm = 'bm25' | 'qps' | 'pt15'
+
 type OramaPluginOptions = {
+  scoringAlgorithm?: ScoringAlgorithm
   analytics?: {
     enabled: boolean
     apiKey: string
@@ -35,7 +41,21 @@ const md = new MarkdownIt({
   html: true
 })
 
-async function createOramaContentLoader(paths: string[], root: string, base: string) {
+function createOramaContentLoader(paths: string[], root: string, base: string, scoringAlgorithm: ScoringAlgorithm) {
+  if (!['bm25', 'qps', 'pt15'].includes(scoringAlgorithm)) {
+    throw new Error('Invalid scoring algorithm. Expected one of: bm25, qps, pt15. Got: ' + scoringAlgorithm)
+  }
+
+  const plugins: OramaPlugin[] = []
+
+  if (scoringAlgorithm === 'pt15') {
+    plugins.push(pluginPT15())
+  }
+  
+  if (scoringAlgorithm === 'qps') {
+    plugins.push(pluginQPS())
+  }
+
   const contents = paths
     .map((file) => ({
       path: file.replace(root, '').replace('.md', ''),
@@ -44,11 +64,12 @@ async function createOramaContentLoader(paths: string[], root: string, base: str
     .map(parseHTMLContent)
     .flatMap((data) => formatForOrama(data, base))
 
-  const db = await create({
-    schema: presets.docs.schema as AnySchema
+  const db = create({
+    schema: presets.docs.schema as AnySchema,
+    plugins,
   })
 
-  await insertMultiple(db, contents)
+  insertMultiple(db, contents)
 
   return persist(db, 'json', 'browser')
 }
@@ -103,7 +124,7 @@ function removeTrailingSlash(value: string) {
   return value.endsWith('/') ? value.slice(0, -1) : value
 }
 
-export function OramaPlugin(pluginOptions: OramaPluginOptions = {}): Plugin {
+export function OramaPlugin(pluginOptions: OramaPluginOptions = { scoringAlgorithm: 'pt15' }): Plugin {
   let resolveConfig: any
   const virtualModuleId = 'virtual:search-data'
   const resolvedVirtualModuleId = `\0${virtualModuleId}`
@@ -139,6 +160,7 @@ export function OramaPlugin(pluginOptions: OramaPluginOptions = {}): Plugin {
         return selfHead.concat(pluginHead)
       }
     },
+   
     config: () => ({
       resolve: {
         alias: {
@@ -161,8 +183,9 @@ export function OramaPlugin(pluginOptions: OramaPluginOptions = {}): Plugin {
       const pages = resolveConfig.vitepress.pages.map((page: string) => `${root}/${page}`)
 
       return `
-        const data = ${JSON.stringify(await createOramaContentLoader(pages, root, base))};
+        const data = ${JSON.stringify(await createOramaContentLoader(pages, root, base, pluginOptions.scoringAlgorithm!))};
         const analytics = ${JSON.stringify(pluginOptions.analytics)};
+        const scoringAlgorithm = '${pluginOptions.scoringAlgorithm}';
         export default { data, analytics };
       `
     }

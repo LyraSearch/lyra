@@ -1,0 +1,21 @@
+{
+  "name": "vitepress-1.4.1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docs:dev": "vitepress dev",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@orama/plugin-vitepress": "workspace:*"
+  },
+  "devDependencies": {
+    "vitepress": "1.0.0-rc.31"
+  }
+}
